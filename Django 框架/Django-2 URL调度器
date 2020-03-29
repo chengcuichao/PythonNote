@@ -1,0 +1,205 @@
+### Django 如何处理一个请求
+
+当一个用户请求Django 站点的一个页面，下面是Django 系统决定执行哪个Python 代码使用的算法：
+
+1. Django 确定使用根 URLconf 模块。通常，这是 ROOT_URLCONF 设置的值，但如果传入 HttpRequest 对象拥有 urlconf 属性（通过中间件设置），它的值将被用来代替 ROOT_URLCONF 设置。
+
+2. Django 加载该 Python 模块并寻找可用的 urlpatterns 。它是 django.urls.path() 和(或) django.urls.re_path() 实例的序列(sequence)。
+
+3. Django 会按顺序遍历每个 URL 模式，然后会在所请求的URL匹配到第一个模式后停止，并与 path_info 匹配。
+
+4. 一旦有 URL 匹配成功，Djagno 导入并调用相关的视图，这个视图是一个Python 函数（或基于类的视图 class-based view ）。视图会获得如下参数：
+
+   - 一个 HttpRequest 实例。
+
+   - 如果匹配的 URL 包含未命名组，那么来自正则表达式中的匹配项将作为位置参数提供。
+   - 关键字参数由路径表达式匹配的任何命名部分组成，并由 django.urls.path() 或 django.urls.re_path() 的可选 kwargs 参数中指定的任何参数覆盖。
+
+5. 如果没有 URL 被匹配，或者匹配过程中出现了异常，Django 会调用一个适当的错误处理视图。参加下面的错误处理( Error handling )。
+
+### URLconf 示例
+
+```python
+from django.urls import path,re_path
+
+from cmdb import views as cmdb
+
+
+urlpatterns = [
+    path(r'login/',cmdb.Login.as_view()),
+    path(r'cmdb/Server/<int:ServerId>', cmdb.Server.as_view()),
+]
+
+```
+
+注意：
+
+- 要从 URL 中取值，使用尖括号。
+- 捕获的值可以选择性地包含转换器类型。比如，使用`<int:ServerId>`来捕获整型参数。如果不包含转换器，则会匹配除了 `/` 外的任何字符。
+- 这里不需要添加反斜杠，因为每个 URL 都有。比如，应该是 `login/` 而不是 `/login/` 
+
+#### 1、 路径转换器
+
+路径转换器有以下几种：
+
+- str - 匹配除了 '/' 之外的非空字符串。如果表达式内不包含转换器，则会默认匹配字符串。
+- int - 匹配0或任何正整数。返回一个 int 。
+- slug - 匹配任意由 ASCII 字母或数字以及连字符和下划线组成的短标签。比如，building-your-1st-django-site 。
+- uuid - 匹配一个格式化的 UUID 。为了防止多个 URL 映射到同一个页面，必须包含破折号并且字符都为小写。比如，075194d3-6885-417e-a8a8-6c931e272f00。返回一个 UUID 实例。
+- path - 匹配非空字段，包括路径分隔符 '/' 。它允许你匹配完整的 URL 路径而不是像 str 那样匹配 URL 的一部分。
+
+#### 2、自定义的路径转换器
+
+对于更复杂的匹配需求，你能定义你自己的路径转换器。
+
+转换器是一个类，包含如下内容：
+
+- 字符串形式的 `regex` 类属性。
+- `to_python(self, value)` 方法，用来处理匹配的字符串转换为传递到函数的类型。如果没有转换为给定的值，它应该会引发 `ValueError` 。`ValueError` 说明没有匹配成功，因此除非另一个 URL 模式匹配成功，否则会向用户发送404响应。
+- `to_url(self, value)` ，处理将 Python 类型转换为 URL 中要使用的字符串。
+
+```python
+class FourDigitYearConverter:
+    regex = '[0-9]{4}'
+
+    def to_python(self, value):
+        return int(value)
+
+    def to_url(self, value):
+        return '%04d' % value
+```
+
+在 URLconf 中使用 [`register_converter()`](https://docs.djangoproject.com/zh-hans/3.0/ref/urls/#django.urls.register_converter) 来注册自定义的转换器类：
+
+```python
+from django.urls import path, register_converter
+
+from . import converters, views
+
+register_converter(converters.FourDigitYearConverter, 'yyyy')
+
+urlpatterns = [
+    path('articles/2003/', views.special_case_2003),
+    path('articles/<yyyy:year>/', views.year_archive),
+    ...
+]
+```
+
+#### 3、使用正则表达式
+
+如果路径和转化器语法不能很好的定义你的 URL 模式，你可以可以使用正则表达式。如果要这样做，请使用 `re_path()` 而不是 `path()`。
+
+在 Python 正则表达式中，命名正则表达式组的语法是 `(?P<name>pattern)` ，其中 `name` 是组名，`pattern` 是要匹配的模式。
+
+这里是先前 URLconf 的一些例子，现在用正则表达式重写一下：
+
+```python
+from django.urls import path, re_path
+
+from . import views
+
+urlpatterns = [
+    path('articles/2003/', views.special_case_2003),
+    re_path(r'^articles/(?P<year>[0-9]{4})/$', views.year_archive),
+    re_path(r'^articles/(?P<year>[0-9]{4})/(?P<month>[0-9]{2})/$', views.month_archive),
+    re_path(r'^articles/(?P<year>[0-9]{4})/(?P<month>[0-9]{2})/(?P<slug>[\w-]+)/$', views.article_detail),
+]
+```
+
+- 将要匹配的 URLs 将稍受限制。比如，10000 年将不在匹配，因为 year 被限制长度为4。
+- 无论正则表达式进行哪种匹配，每个捕获的参数都作为字符串发送到视图。
+
+当从使用 `path()` 切换到 `re_path()` （反之亦然），要特别注意，视图参数类型可能发生变化，你可能需要调整你的视图。
+
+#### 4、使用未命名的正则表达式组
+
+还有命名组语法，例如 `(?P[0-9]{4})` ，你也可以使用更短的未命名组，例如 `([0-9]{4})` 。
+
+不是特别推荐这个用法，因为它会更容易在匹配的预期含义和视图参数之间引发错误。
+
+在任何情况下，推荐在给定的正则表达式里只使用一个样式。当混杂两种样式时，任何未命名的组都会被忽略，而且只有命名的组才会传递给视图函数。
+
+```python
+from django.urls import path, re_path
+
+from . import views
+
+urlpatterns = [
+    path('articles/2003/', views.special_case_2003),
+    re_path(r'^articles/(?P<year>[0-9]{4})/$', views.year_archive),
+    re_path(r'^articles/(?P<year>[0-9]{4})/(?P<month>[0-9]{2})/$', views.month_archive),
+    re_path(r'^articles/(?P<year>[0-9]{4})/(?P<month>[0-9]{2})/(?P<slug>[\w-]+)/$', views.article_detail),
+]
+```
+
+**使用未命名的正则表达式组**
+
+还有命名组语法，例如 `(?P<year>[0-9]{4}) ` ，你也可以使用更短的未命名组，例如 `([0-9]{4}) `。
+
+不是特别推荐这个用法，因为它会更容易在匹配的预期含义和视图参数之间引发错误。
+
+在任何情况下，推荐在给定的正则表达式里只使用一个样式。当混杂两种样式时，任何未命名的组都会被忽略，而且只有命名的组才会传递给视图函数。
+
+
+
+### 嵌套参数
+
+正则表达式允许嵌套参数，Django 将处理它们并传递给视图。当转换时，Django 将试着填充给所有外部捕捉参数，忽略任何嵌套捕捉参数。考虑下面可选的带有页面参数的 URL 模式：
+
+```python
+from django.urls import re_path
+
+urlpatterns = [
+    re_path(r'^blog/(page-(\d+)/)?$', blog_articles),                  # bad
+    re_path(r'^comments/(?:page-(?P<page_number>\d+)/)?$', comments),  # good
+]
+```
+
+ 两个模式使用嵌套参数，并处理：例如, blog/page-2/ 将匹配给 blog_articles 并带有2个参数：page-2/ 和 2 。第二个模式为 comments 匹配 comments/page-2/ 并带有设置为2的关键参数 page_number 。这个案例里的外部参数是一个非捕捉参数 (?:...) 。
+
+blog_articles 视图需要反转最外层捕捉的参数，page-2/ 或在这里不需要参数，而 comments 可以在没有参数或 page_number 值的情况下反转。
+
+嵌套捕捉参数在视图参数和 URL 直接创建一个强耦合，如 blog_articles 所示：视图接收部分 URL (page-2/) 而不只是视图要的值。当反转时这种耦合更明显，因为反转视图我们需要传递一段 URL 而不是 page number。
+
+根据经验，只有当正则表达式需要一个参数但视图忽略它时，才捕捉该视图需要的值并使用非捕捉参数
+
+### 包含其它的URLconfs
+
+在任何时候，你的 urlpatterns 都可以 "include" 其它URLconf 模块。这实际上将一部分URL 放置于其它URL 下面。
+
+例如，下面是URLconf Django website 自己的URLconf 中一个片段。它包含许多其它URLconf：
+
+```python
+from django.urls import include, path
+
+urlpatterns = [
+    # ... snip ...
+    path('community/', include('aggregator.urls')),
+    path('contact/', include('contact.urls')),
+    # ... snip ...
+]
+```
+
+每当 Django 遇到 include() ，它会将匹配到该点的URLconf的任何部分切掉，并将剩余的字符串发送到包含的URLconf进行进一步处理。
+
+另一种可能性是通过使用 path() 实例的列表来包含其他 URL 模式。比如，看这个 URLconf:
+
+```python
+from django.urls import include, path
+
+from apps.main import views as main_views
+from credit import views as credit_views
+
+extra_patterns = [
+    path('reports/', credit_views.report),
+    path('reports/<int:id>/', credit_views.report),
+    path('charge/', credit_views.charge),
+]
+
+urlpatterns = [
+    path('', main_views.homepage),
+    path('help/', include('apps.help.urls')),
+    path('credit/', include(extra_patterns)),
+]
+```
+

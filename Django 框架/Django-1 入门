@@ -1,0 +1,202 @@
+### Django安装及初始配置
+
+#### 1、安装及常用命令
+
+```shell
+#1、安装
+pip  install django
+#2、创建项目
+django-admin startproject project_name
+#3、运行django程序
+python manage.py runserver 127.0.0.1:8001
+#4、创建app
+python manage.py startapp cmdb
+#5、数据库表操作
+python manage.py makemigrations
+python manage.py migrate
+```
+
+#### 2、各个文件的作用
+
+```shell
+mysite             #对整个程序进行配置
+    init
+    settings       #配置文件
+    url            #URL对应关系
+    wsgi           #遵循WSIG规范，uwsgi + nginx
+    manage.py      #管理Django程序：
+app：
+    migrations     #数据库表结构修改记录
+    admin          #Django为我们提供的后台管理
+    apps           #配置当前app
+    models         #ORM,写指定的类  通过命令可以创建数据库结构
+    tests          #单元测试
+    views          #业务代码
+```
+
+#### 3、配置说明
+
+```python
+#配置模板路径
+TEMPLATES = [
+                {
+                    'BACKEND': 'django.template.backends.django.DjangoTemplates',
+                    'DIRS': [os.path.join(BASE_DIR, 'templates')], #模板路径
+                   'APP_DIRS': True,
+                    'OPTIONS': {
+                        'context_processors': [
+                            'django.template.context_processors.debug',
+                            'django.template.context_processors.request',
+                            'django.contrib.auth.context_processors.auth',
+                            'django.contrib.messages.context_processors.messages',
+                        ],
+                    },
+                },
+            ]
+
+#配置静态目录
+STATIC_URL = '/static/'
+STATICFILES_DIRS = (
+         os.path.join(BASE_DIR, 'static'),
+      )
+
+#注释跨站请求伪造
+'django.middleware.csrf.CsrfViewMiddleware',
+
+#settings增加app名
+INSTALLED_APPS = [
+    'django.contrib.admin',
+    'django.contrib.auth',
+    'django.contrib.contenttypes',
+    'django.contrib.sessions',
+    'django.contrib.messages',
+    'django.contrib.staticfiles',
+    'cmdb',
+]
+
+#mysql数据库的话，在settings里修改DATABASES
+DATABASES = {
+    'default': {
+        'ENGINE': 'django.db.backends.mysql',
+        'NAME': 'myweb',
+        'USER': 'root',
+        'PASSWORD': 'my-pw',
+        'HOST': '172.3.250.254',
+        'PORT': '3306',
+    }
+}
+
+```
+
+### Django使用
+
+#### 1、接收请求响应
+
+```python
+#主目录urls：
+from django.contrib import admin
+from django.urls import path,re_path
+from django.shortcuts import HttpResponse
+
+from cmdb import views as cmdb
+
+urlpatterns = [
+    path(r'admin/', admin.site.urls),
+    path(r'login',cmdb.login),
+    path(r'clogin/',cmdb.Login.as_view()),
+]
+
+
+#app中view中：
+from django.shortcuts import render
+from django.shortcuts import HttpResponse
+from django.shortcuts import redirect
+# Create your views here.
+from django.views import View
+
+
+#FBV
+def login(request):
+
+    if request.method == 'GET':
+        return render(request,'login.html')  #可直接返回模板文件
+
+    elif request.method == 'POST':
+        return HttpResponse("<h1>OK</h1>")  #直接返回文本
+
+    else:
+        return redirect('http://baidu.com')  #跳转或重定向
+
+#CBV
+class Login(View):
+
+    def dispatch(self,request,*args,**kwargs):
+        '''
+            可以通过重写dispatch来执行更多的事情
+        :param request: 
+        :param args: 
+        :param kwargs: 
+        :return: 
+        '''
+        result = super(Login,self).dispatch(request,*args,**kwargs)
+        return result
+
+    def get(self,request):
+        return render(request,'login.html')
+
+    def post(self,request):
+        return HttpResponse("<h1>OK</h1>")
+
+    def delete(self,request):
+        return redirect('http://baidu.com')
+
+
+```
+
+#### 2、接收请求的方法
+
+```python
+1、获取用户请求数据
+	request.method  		  #请求方式
+    request.GET
+    request.POST
+    request.POST.get('user')  #获取来自用户提交的数据
+    request.POST.getlist()    #checkbox等多选的内容
+    request.FILES
+
+```
+
+#### 示例
+
+**上传文件：**
+
+```python
+from django.shortcuts import render
+from django.shortcuts import HttpResponse
+from django.shortcuts import redirect
+
+def index(request):
+    if request.method == 'POST':
+        obj = request.FILES.get('put_file')
+        f = open(obj.name,mode='wb')
+        for item in obj.chunks():
+            f.write(item)
+        f.close()
+        return HttpResponse("OK")
+    else:
+        return  render(request,'index.html')
+```
+
+```html
+<body>
+<form action="/index"  method="post" enctype="multipart/form-data">
+    <div>
+        <input type="file" name="put_file"/>
+    </div>
+    <div>
+        <input type="submit" value="上传"/>
+    </div>
+</form>
+</body>
+```
+
