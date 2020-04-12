@@ -1,0 +1,128 @@
+
+
+## 设备资产管理
+
+### /v1/cmdb/device
+
+#### GET（获取）
+
+获取资产的公共参数有type (获取资产类型)、selectType (查询数据库的方式)：
+
+**type字段值的说明**
+
+| 查询字段 |      字段说明      |
+| :------: | :----------------: |
+| getQuery | 以查询的方式去获取 |
+|  getAll  |     获取所有的     |
+
+**selectType字段值的说明**
+
+| selectType字段值 |                       值的说明                       |
+| :--------------: | :--------------------------------------------------: |
+|      exact       |                                                      |
+|      iexact      |                                                      |
+|     contains     |                                                      |
+|    icontains     |                                                      |
+|      ......      | 支持django model中查询字段的参数如：in,gt,gte,lt,lte |
+
+##### type为getQuery
+
+可以通过QueryList实现多条件查询，通过偶数位来增加条件，支持多逻辑规则查询 &（and），|(or)，~（not）。通过:,>,<,<=,>=,=来进行查询。
+
+```python
+{'type':'getQuery',
+'selectType':'exact',
+'QueryList':['DeviceName:ALIBJ-PROD-Druid-Core4',
+             'and',
+             'DeviceModel:Alibaba Cloud ECS']}
+```
+
+QueryList可以写参数：
+
+|            字段名             |      字段说明      |
+| :---------------------------: | :----------------: |
+|          DeviceName           |       设备名       |
+|          DeviceBrand          |      设备品牌      |
+|          DeviceModel          |      设备型号      |
+|      DeviceSerialNumber       |      设备编号      |
+|        OperatingSystem        |      操作系统      |
+|         DeviceStatus          |      运行状态      |
+|       DeviceEnvironment       |      所属环境      |
+|         ManageAddress         |     远控卡地址     |
+| ComputerRoom__ComputerAddress |      归属机房      |
+|   ComputerRoom__ShorterName   |  归属机房机房简称  |
+|          CreateTime           |      录入时间      |
+|     ip_address__IpAddress     |    主机的ip地址    |
+|     ip_address__IsMainIp      | IP地址是否为主地址 |
+
+##### type为getAll
+
+pageLine 一页有几行
+
+pageNum 第几页，不写默认第一页
+
+```python
+{'type':'getAll',
+'selectType':'exact',
+'pageLine':20,
+'pageNum':2}
+```
+
+返回参数有：
+
+pageSum  总页数
+
+pageNum 第几页
+
+dataList 所有数据
+
+#### POST （创建）
+
+创建的参数有详细查看表数据
+
+#### DELETE（删除）
+
+删除一般为资产id，资产名
+
+#### PUT（更新）
+
+#### /v1/cmdb/computerRoom
+
+
+
+#### /v1/cmdb/macAddress
+
+#### /v1/cmdb/ipAddress
+
+#### /v1/cmdb/domain
+
+#### /v1/cmdb/businessLine
+
+#### /v1/cmdb/model
+
+
+
+GET (选择)：从服务器上获取一个具体的资源或者一个资源列表。 
+POST （创建）： 在服务器上创建一个新的资源。
+PUT（更新）：以整体的方式更新服务器上的一个资源。 
+PATCH （更新）：只更新服务器上一个资源的一个属性。
+DELETE（删除）：删除服务器上的一个资源。 
+HEAD ： 获取一个资源的元数据，如数据的哈希值或最后的更新时间。
+OPTIONS：获取客户端能对资源做什么操作的信息。
+
+
+
+/v1/cmdb/computerRoom
+
+/v1/cmdb/device
+
+/v1/cmdb/macAddress
+
+/v1/cmdb/ipAddress
+
+/v1/cmdb/domain
+
+/v1/cmdb/businessLine
+
+/v1/cmdb/model
+

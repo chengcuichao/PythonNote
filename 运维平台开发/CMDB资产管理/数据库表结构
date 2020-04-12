@@ -1,48 +1,103 @@
-1、资产表 Assets
+机房信息表Computer_Room
 
-|   字段名   |  字段说明  | 字段类型 |
-| :--------: | :--------: | :------: |
-|     Id     |   设备ID   |   int    |
-| DeviceName |   设备名   |   str    |
-|            |  设备品牌  |          |
-|            |  设备型号  |          |
-|            |  设备编号  |          |
-|            |  运行状态  |          |
-|            |  操作系统  |          |
-|            |  所属环境  |          |
-|            | 远控卡地址 |          |
-|            | 远控卡账号 |          |
-|            | 远控卡密码 |          |
-|            |  归属机房  |          |
-|            |  归属机柜  |          |
-|            |  录入时间  |          |
-|            |            |          |
+|     字段名      |       字段说明       | 字段类型 |
+| :-------------: | :------------------: | :------: |
+|       Id        |        机房id        |   int    |
+| ComputerAddress |     机房具体地址     |   str    |
+|   ShorterName   | 机房逻辑简称（英文） |   str    |
+|   CabinetList   |       机柜列表       |   str    |
 
-mac地址表MacAddress
+资产表 Device_Info
 
-|   字段名    |  字段说明   | 字段类型 |
-| :---------: | :---------: | :------: |
-|     Id      | mac地址的id |          |
-| MacAddress  |   mac地址   |          |
-|  DeviceId   |   设备id    |          |
-| IpAddressId | ip地址的id  |          |
+|       字段名       |  字段说明  | 字段类型 |
+| :----------------: | :--------: | :------: |
+|         Id         |   设备ID   |   int    |
+|     DeviceName     |   设备名   |   str    |
+|    DeviceBrand     |  设备品牌  |   str    |
+|    DeviceModel     |  设备型号  |   str    |
+| DeviceSerialNumber |  设备编号  |   str    |
+|  OperatingSystem   |  操作系统  |   str    |
+|    DeviceStatus    |  运行状态  |   str    |
+| DeviceEnvironment  |  所属环境  |   str    |
+|   ManageAddress    | 远控卡地址 |   str    |
+|   ManageAccount    | 远控卡账号 |   str    |
+|   ManagePassword   | 远控卡密码 |   str    |
+|  ComputerRoom_id   |  归属机房  |   str    |
+|      Cabinet       |  归属机柜  |   str    |
+|     CreateTime     |  录入时间  |   date   |
 
-2、IP地址：IpAddress
+mac地址表Mac_Address
 
-|      字段名      |   字段说明   | 字段类型 |
-| :--------------: | :----------: | :------: |
-|        Id        |   ip地址id   |          |
-|    IpAddress     |    ip地址    |          |
-| IpAddressBlockId | ip地址段的id |          |
-|                  |              |          |
+|    字段名     |  字段说明   | 字段类型 |
+| :-----------: | :---------: | :------: |
+|      Id       | mac地址的id |   int    |
+|  MacAddress   |   mac地址   |   str    |
+| DeviceInfo_id |   设备id    |   str    |
 
+IP地址：Ip_Address
 
+|    字段名     |  字段说明  | 字段类型 |
+| :-----------: | :--------: | :------: |
+|      Id       |  ip地址id  |   int    |
+|   IpAddress   |   ip地址   |   str    |
+|   IsMainIp    | 是否为主ip |   bool   |
+| DeviceInfo_id |   设备id   |   str    |
+| MacAddress_id | mac地址id  |   int    |
 
+域名表Domain_Info
 
+|   字段名   |   字段说明   | 字段类型 |
+| :--------: | :----------: | :------: |
+|     Id     |    域名id    |   int    |
+| DomainName |     域名     |   str    |
+| DnsHostIp  | 解析的IP地址 |   str    |
 
+业务线Business_Line
 
+| 字段名         | 字段说明       | 字段类型 |
+| -------------- | -------------- | -------- |
+| Id             | 业务线Id       | int      |
+| ProductChinese | 业务线中文说明 | str      |
+| BusinessLine   | 业务线名       | str      |
 
-业务线，模块与资产表的关联
+模块Model_Info
+
+|      字段名      |                 字段说明                 | 字段类型 |
+| :--------------: | :--------------------------------------: | :------: |
+|        Id        |                  模块ID                  |          |
+|    ModelName     |                 模块名称                 |          |
+| ModelInformation |                 模块说明                 |          |
+| BusinessLine_id  |                 业务线Id                 |          |
+|     LogPath      |                 日志路径                 |          |
+|  ModelIsProcess  |            模块名是否是进程名            |          |
+|   ConvertRule    | （根据程序运行的参数）将进程名变为模块名 |          |
+| IsCreateFilebeat |         是否需要创建到filebeat上         |          |
+|  MultiLineRule   |               多行匹配规则               |          |
+|     CutRule      |                 切割规则                 |          |
+|  IsK8sK8sModel   |            是否是k8s上的模块             |          |
+|   IsInsideLog    |        是否需要收集容器内部的日志        |          |
+| InsideLogCutRule |          容器内部日志的切割规则          |          |
+|        Pm        |                 产品经理                 |          |
+|      Owner       |                研发负责人                |          |
+|      DevOps      |                运维责任人                |          |
+|    UpdateTime    |               最后更新时间               |          |
+|   UpdatePeople   |                最后更新人                |          |
+
+域名与模块的关联表Domain_Model
+
+|    字段名     | 字段说明 | 字段类型 |
+| :-----------: | :------: | :------: |
+|      Id       |    id    |   int    |
+| DomainInfo_id | 域名的id |   int    |
+| ModelInfo_id  | 模块的id |   int    |
+
+与资产表的关联Model_Device
+
+|    字段名     | 字段说明 | 字段类型 |
+| :-----------: | :------: | :------: |
+|      Id       |    id    |   int    |
+| DeviceInfo_id |  设备id  |   int    |
+| ModelInfo_id  |  模块id  |   int    |
 
 
 

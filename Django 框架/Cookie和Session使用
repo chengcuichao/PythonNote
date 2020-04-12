@@ -1,0 +1,36 @@
+1. Session
+	基于Cookie做用户验证时：敏感信息不适合放在cookie中
+	
+
+    a. Session原理
+		Cookie是保存在用户浏览器端的键值对
+		Session是保存在服务器端的键值对
+	
+    b. Cookie和Session对比
+   
+    c. Session配置(缺少cache)
+   
+    d. 示例：实现两周自动登陆
+            - request.session.set_expiry(60*10)
+            - SESSION_SAVE_EVERY_REQUEST = True
+
+    PS: cookie中不设置超时时间，则表示关闭浏览器自动清除
+	
+	
+	- session依赖于cookie
+	- 服务器session
+		request.session.get()
+		request.session[x] = x
+		
+		request.session.clear()
+		
+	- 配置文件中设置默认操作（通用配置）：
+		SESSION_COOKIE_NAME ＝ "sessionid"                       # Session的cookie保存在浏览器上时的key，即：sessionid＝随机字符串（默认）
+		SESSION_COOKIE_PATH ＝ "/"                               # Session的cookie保存的路径（默认）
+		SESSION_COOKIE_DOMAIN = None                             # Session的cookie保存的域名（默认）
+		SESSION_COOKIE_SECURE = False                            # 是否Https传输cookie（默认）
+		SESSION_COOKIE_HTTPONLY = True                           # 是否Session的cookie只支持http传输（默认）
+		SESSION_COOKIE_AGE = 1209600                             # Session的cookie失效日期（2周）（默认）
+		SESSION_EXPIRE_AT_BROWSER_CLOSE = False                  # 是否关闭浏览器使得Session过期（默认）
+		# set_cookie('k',123)
+		SESSION_SAVE_EVERY_REQUEST = False                       # 是否每次请求都保存Session，默认修改之后才保存（默认）

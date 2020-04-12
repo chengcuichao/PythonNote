@@ -2,7 +2,7 @@
 
 #### 1、创建表
 
-在app目录的models中：
+**在app目录的models中创建**
 
 ```python
 from django.db import models
@@ -18,6 +18,65 @@ class MacAddress(models.Model):
 
 #注：当model中如果没有自增列，则自动会创建一个列名为id的列
 ```
+
+**Meta元数据信息**
+
+```python
+    class Meta():
+        app_label = 'cmdb'
+        table_name = 'cmdb_mac_address'
+        db_tablespace = ''
+        get_latest_by = 'DateField'
+        managed = True
+        order_with_respect_to = 'pizza'
+        ordering = ['order_date']                # 按订单升序排列
+        ordering = ['-order_date']               # 按订单降序排列，-表示降序
+        ordering = ['?order_date']               # 随机排序，？表示随机
+        ordering = ['-pub_date', 'author']      # 对 pub_date 降序,然后对 author 升序
+        unique_together = (("first_name", "last_name"),)
+        verbose_name = "pizza"
+        verbose_name_plural = "stories"
+```
+
+**app_label**
+
+app_label这个选项只在一种情况下使用，就是你的模型类不在默认的应用程序包下的models.py文件中，这时候你需要指定你这个模型类是那个应用程序的。比如你在其他地方写了一个模型类，而这个模型类是属于myapp的，那么你这是需要指定为
+
+**db_table**
+
+db_table是用于指定自定义数据库表名。
+
+**db_tablespace**
+
+有些数据库有数据库表空间，比如Oracle。你可以通过db_tablespace来指定这个模型对应的数据库表放在哪个数据库表空间。
+
+**get_latest_by**
+
+由于Django的管理方法中有个lastest()方法，就是得到最近一行记录。如果你的数据模型中有 DateField 或 DateTimeField 类型的字段，你可以通过这个选项来指定lastest()是按照哪个字段进行选取的。
+
+**managed**
+
+由于Django会自动根据模型类生成映射的数据库表，如果你不希望Django这么做，可以把managed的值设置为False。
+
+**order_with_respect_to**
+
+这个选项一般用于多对多的关系中，它指向一个关联对象。就是说关联对象找到这个对象后它是经过排序的。指定这个属性后你会得到一个get_XXX_order()和set_XXX_order（）的方法,通过它们你可以设置或者回去排序的对象。
+
+**ordering**
+
+这个字段是告诉Django模型对象返回的记录结果集是按照哪个字段排序的。
+
+**unique_together**
+
+unique_together这个选项用于：当你需要通过两个字段保持唯一性时使用。这会在 Django admin 层和数据库层同时做出限制(也就是相关的 UNIQUE 语句会被包括在 CREATE TABLE 语句中)。比如：一个Person的FirstName和LastName两者的组合必须是唯一的。
+
+**verbose_name**
+
+verbose_name的意思很简单，就是给你的模型类起一个更可读的名字
+
+**verbose_name_plural**
+
+这个选项是指定，模型的复数形式是什么
 
 **创建数据库表：**
 
@@ -116,15 +175,17 @@ BinaryField(Field)
 
 ```python
 null                数据库中字段是否可以为空
-db_column           数据库中字段的列名
-db_tablespace
 default             数据库中字段的默认值
 primary_key         数据库中字段是否为主键
-db_index            数据库中字段是否可以建立索引
-unique              数据库中字段是否可以建立唯一索引
-unique_for_date     数据库中字段【日期】部分是否可以建立唯一索引
-unique_for_month    数据库中字段【月】部分是否可以建立唯一索引
-unique_for_year     数据库中字段【年】部分是否可以建立唯一索引
+db_column           数据库中字段的列名
+db_index            数据库中字段是否建立索引
+unique              数据库中字段是否建立唯一索引
+db_tablespace
+unique_for_date     数据库中字段【日期】部分是否建立唯一索引
+unique_for_month    数据库中字段【月】部分是否建立唯一索引
+unique_for_year     数据库中字段【年】部分是否建立唯一索引
+auto_now            更新时，是否更改为现在时间
+auto_now_add        创建时，是否更改为现在时间
 
 verbose_name        Admin中显示的字段名称
 blank               Admin中是否允许用户输入为空
@@ -167,17 +228,651 @@ MacAddress.objects.filter(DeviceId=3)           #查询DeviceId等于3的数据
 MacAddress.objects.filter(DeviceId=3).first()   #查询DeviceId等于3的数据的第一条数据
 MacAddress.objects.filter(DeviceId__gt=3,IpAddressId=4)
         # lt： 小于
-        # gt：大于
+        # gt： 大于
         # lte：小于等于
         # gte：大于等于
         # eq： 等于
-        # ne：不等于
+        # ne： 不等于
+        
+#会以列表中包含字典的类型返回数据[{},{}]
+MacAddress.objects.filter(DeviceId__gt=3).values('IpAddressId','MacAddress')
+
+#会以列表中包含元组返回数据[(),()]
+MacAddress.objects.all().values_list('IpAddressId','MacAddress')
+
 #删除
 MacAddress.objects.filter(DeviceId=3).delete()
 #更新
 MacAddress.objects.filter(DeviceId=3).update(IpAddressId=4)
 
 ```
+
+### 一对多数据操作
+
+```python
+#创建外键关联
+DeviceInfo = models.ForeignKey(DeviceInfo,to_field='Id',on_delete=models.CASCADE)
+
+#读取数据可以通过外键进行关联查询
+MacAddressObj = MacAddress.objects.filter(DeviceId=3).all()
+for item in MacAddressObj:
+    item.MacAddress
+    item.DeviceInfo.DeviceName
+
+#通过双下划线进行
+MacAddress.objects.filter(DeviceId=3).all().values('MacAddress','DeviceInfo__DeviceName','DeviceInfo__ComputerRoom__ComputerAddress')
+
+#反向查询的时候记录有多个记录就有多个
+Device_Info.objects.filter(Id=92).values_list('DeviceName','ip_address__IpAddress')
+
+```
+
+
+
+### 多对多数据操作
+
+
+
+
+
+### 事务操作
+
+#### 上下文去执行
+
+```python
+from django.shortcuts import render,HttpResponse
+from app01 import models
+from django.db import transaction
+from django.db.models import F
+
+def index(request):
+    try:
+        with transaction.atomic():
+            models.UserInfo.object.filter(id=1).update(balance=F("balance")-100)
+            raise 一个错误
+            models.UserInfo.object.filter(id=2).update(balance=F("balance")+100)
+    except Exception as e:
+        return HttpResponse("出现错误<%s>"%str(e))
+    return HttpResponse("执行成功")
+```
+
+#### 装饰器执行
+
+```python
+from django.db import transaction
+
+@transaction.atomic
+def index(request):
+    //ORM操作
+    return ....
+```
+
+
+
+### QuerySet API
+
+#### QuerySet 基本操作
+
+```python
+q = Device_Info.objects.all()[1:10] 	#切片
+len(q)   	#查看元素个数
+repr(q)		#返回结果
+list(q)		#转换成list
+if Device_Info.objects.filter(Id=98):	#用作判断
+	pass
+
+Device_Info.objects.all().ordered       #可用于是否经过排序
+Device_Info.objects.all().db			#如果现在执行此查询，将使用的数据库。
+```
+
+#### 返回新的QuerySet对象的方法
+
+##### fileter
+
+条件都是and的关系，想要执行or的需要Q的配合
+
+```python
+Device_Info.objects.filter(Id__gte=150,DeviceModel='PowerEdge R720')
+```
+
+##### exclude
+
+给定的查找参数不匹配查询，也不支持or的关系
+
+```python
+Entry.objects.exclude(pubdate__gt=datetime.date(2005, 1, 3)).exclude(headline='Hello')
+```
+
+##### annotate
+
+于实现聚合group by查询 ，查询id为92的有几个IP地址
+
+```python
+from django.db.models import Count, Avg, Max, Min, Sum
+
+Device_Info.objects.filter(Id=92).values('DeviceName').annotate(Count('ip_address__IpAddress',distinct=False))python
+```
+
+##### order_by
+
+由模型的中QuerySet的ordering选项给出的排序元组排序Meta。您可以QuerySet使用order_by方法逐个覆盖此方法。
+
+```python
+Device_Info.objects.filter(DeviceModel='PowerEdge R720').order_by('-DeviceName','DeviceBrand')  	#以DeviceName降序排序，DeviceBrand升序排序，?随机排序
+```
+
+#####  reverse
+
+使用该reverse()方法可以反转查询集元素的返回顺序
+
+```python
+Device_Info.objects.all().reverse()[:5]    #查询最后五位
+```
+
+##### distinct
+
+从查询结果中消除重复的行
+
+```
+Device_Info.objects.filter(Id=92).values('DeviceName', 'ip_address__IpAddress').distinct()
+```
+
+##### values
+
+指定返回字段，返回一个字典
+
+```python
+Device_Info.objects.filter(Id=92).values_list('DeviceName','ip_address__IpAddress')
+```
+
+##### values_list
+
+指定返回字段，返回一个元组
+
+```python
+QueryField = ['MacAddress','DeviceInfo__DeviceName','DeviceInfo__ComputerRoom__ComputerAddress']
+
+Mac_Address.objects.filter(Id=1).values_list(*QueryField)
+```
+
+##### dates
+
+返回QuerySet，其结果是datetime.date代表的对象列表，这些对象表示的内容为所有可用日期
+
+```python
+year 	返回该字段的所有不同年份值的列表。
+month 	返回该字段的所有不同年份/月份值的列表。
+week	返回该字段的所有不同年份/星期值的列表。所有日期均为星期一。
+day 	返回该字段的所有不同年/月/日值的列表。
+
+Device_Info.objects.dates('CreateTime','month')
+>> <QuerySet [datetime.date(2020, 4, 1)]>
+```
+
+##### datetimes
+
+返回所有可用日期接受参数：year，month，week，day，hour，minute，second
+
+```python
+
+Device_Info.objects.datetimes('CreateTime','hour')
+```
+
+##### all
+
+返回当前或子类的副本，当想保存之前的查询，又想在此基础上再进行查询。
+
+```python
+CopySet = Device_Info.objects.filter(DeviceModel='PowerEdge R720').all()
+Result = CopySet.filter(OperatingSystem='CentOS Linux release 7.4.1708 (Core)')
+print(CopySet,Result)
+```
+
+##### union
+
+组合两个或多个QuerySets的结果
+
+```
+qs1 = Device_Info.objects.filter(Id=92).values('DeviceName', 'ip_address__IpAddress')
+qs2 = Device_Info.objects.filter(Id=93).values('DeviceName', 'ip_address__IpAddress')
+qs1.union(qs2,all=False)
+```
+
+##### defer
+
+在某些复杂的数据建模情况下，模型中可能包含很多字段，其中一些字段可能包含很多数据（例如，文本字段），或者需要昂贵的处理才能将它们转换为Python对象。如果在某些情况下使用查询集的结果，而这些情况在最初获取数据时不知道是否需要这些特定字段，则可以告诉Django不要从数据库中检索它们，但如果要访问该字段，则将从数据库中检索每个字段。
+
+```python
+Device_Info.objects.filter(Id=92).defer('DeviceName')
+```
+
+##### only
+
+该only()方法与的相反defer()，仅取某个表中的数据
+
+```python
+Device_Info.objects.filter(Id=92).only('DeviceName')
+```
+
+##### using
+
+当有多个数据库时，指定使用的数据库，参数为别名
+
+```python
+Device_Info.objects.filter(Id=92).only('DeviceName').using('default')
+```
+
+##### select_for_update
+
+返回一个查询集，该查询集将锁定行直到事务结束，通常，如果另一个事务已经在选定的行之一上获得了锁，则查询将阻塞直到锁被释放。如果这不是您想要的行为，请更改参数select_for_update(nowait=True)。这将使查询成为非阻塞。如果另一个事务已经获取了冲突的锁，DatabaseError则在执行查询集时将引发此冲突。您也可以select_for_update(skip_locked=True)改用忽略锁定的行 。
+
+```python
+from django.db import transaction
+
+qs1 = Device_Info.objects.select_for_update().filter(Id=92)
+
+with transaction.atomic():
+    for item in qs1:
+    item.DeviceModel = 'ECS1'
+    item.save()
+```
+
+##### raw
+
+进行原始SQL查询，执行该查询，然后返回一个 django.db.models.query.RawQuerySet实例。RawQuerySet可以像普通方法一样迭代此实例QuerySet以提供对象实例。
+
+```python
+a = Model_Info.objects.raw('SELECT * FROM cmdb_model_info',using="default")
+print(a[0].ModelName)
+```
+
+##### and(&)
+
+组合查询集必须使用相同的模型，以下三个是等价的
+
+```python
+Device_Info.objects.filter(DeviceName__contains='ALIBJ-PROD') & Device_Info.objects.filter(OperatingSystem='CentOS Linux release 7.4.1708 (Core)')
+
+Device_Info.objects.filter(DeviceName__contains='ALIBJ-PROD',OperatingSystem='CentOS Linux release 7.4.1708 (Core)')
+
+from django.db.models import Q
+
+Device_Info.objects.filter(Q(DeviceName__contains='ALIBJ-PROD') & Q(peratingSystem='CentOS Linux release 7.4.1708 (Core)'))
+```
+
+##### or(|)
+
+组合查询集必须使用相同的模型，以下两个是等价的
+
+```python
+Device_Info.objects.filter(DeviceName__contains='ALIBJ-PROD') | Device_Info.objects.filter(OperatingSystem='CentOS Linux release 7.4.1708 (Core)')
+
+from django.db.models import Q
+
+Device_Info.objects.filter(Q(DeviceName__contains='ALIBJ-PROD') | Q(OperatingSystem='CentOS Linux release 7.4.1708 (Core)'))
+```
+
+#### 不返回QuerySet对象的方法
+
+##### get
+
+返回与给定查找参数匹配的对象，如果找不到给定参数的对象，则会引发异常，有多个也会引发异常。
+
+```python
+Device_Info.objects.get(Id=92).DeviceName
+```
+
+##### create
+
+一步创建对象并将其全部保存。
+
+```python
+Mac_Address.objects.create(MacAddress='00-D8-61-C0-2C-44',DeviceInfo_id=93, )
+```
+
+##### get_or_create
+
+get到就不创建，返回的为get到的对象和False，get不到就创建，返回的为创建的对象和True。
+
+```python
+obj, created = Mac_Address.objects.get_or_create(MacAddress='00-D8-61-C0-2C-45',DeviceInfo_id=93,defaults={'DeviceInfo_id':94})
+
+print(obj, created)
+```
+
+##### update_or_create
+
+get到就更新，返回更新的对象和False，get不到就创建，返回的为创建的对象和True。
+
+```python
+obj, created = Mac_Address.objects.update_or_create(MacAddress='00-D8-61-C0-2C-45',DeviceInfo_id=94,defaults={'DeviceInfo_id':95})
+```
+
+##### bulk_create
+
+批量创建数据，返回的是列表，元素为对象。
+
+```python
+Mac_Address.objects.bulk_create([ Mac_Address(MacAddress='00-D8-61-C0-2C-45',DeviceInfo_id=i+95) for i in  range(5)])
+```
+
+##### bulk_update
+
+批量更新数据，不需要再手动执行save
+
+```python
+Qs = Mac_Address.objects.filter(MacAddress='00-D8-61-C0-2C-45')
+for item in Qs:
+    item.MacAddress = '00-D8-61-C0-2C-48'
+
+Mac_Address.objects.bulk_update(Qs,['MacAddress'])
+```
+
+##### count
+
+返回一个整数，计算QuerySet元素个数。
+
+```python
+Mac_Address.objects.filter(MacAddress='00-D8-61-C0-2C-45').count()
+```
+
+##### in_bulk
+
+获取字段值（id_list）和field_name这些值的列表，然后返回将每个值映射到具有给定字段值的对象实例的字典，field_name的值必须是唯一的。
+
+```python
+Mac_Address.objects.in_bulk([1,2,3])
+```
+
+##### latest
+
+根据给定的字段返回表中的最新对象。
+
+```python
+Device_Info.objects.filter(DeviceModel='PowerEdge R720').latest('CreateTime')
+```
+
+##### earliest
+
+latest()除方向改变外，其他操作方式相同。
+
+```python
+Device_Info.objects.filter(DeviceModel='PowerEdge R720').earliest('CreateTime')
+```
+
+##### first
+
+查询集匹配的第一个对象
+
+```python
+Device_Info.objects.filter(DeviceModel='PowerEdge R720').first()
+```
+
+##### last
+
+查询集匹配的最后一个对象
+
+```python
+Device_Info.objects.filter(DeviceModel='PowerEdge R720').last()
+```
+
+##### aggregate
+
+统计设备品牌中型号的个数，distinct是否统计不同的。
+
+```python
+Device_Info.objects.filter(DeviceBrand='Huawei').aggregate(Count('DeviceModel',distinct=True))
+```
+
+##### exists
+
+判断查询结果是否为空。
+
+```
+Device_Info.objects.filter(DeviceBrand='Huawei').exists()
+```
+
+##### update
+
+更新数据
+
+```python
+Device_Info.objects.filter(DeviceModel='ECS').update(DeviceModel='Alibaba Cloud ECS')
+```
+
+##### delete
+
+删除数据
+
+```python
+ Device_Info.objects.filter(DeviceModel='ECS').delete()
+```
+
+#### 查询中的字段参数
+
+##### exact
+
+完全符合，如果为比较提供的值是None，它将被解释为SQL NULL。
+
+```python
+from django.db.models import Q
+
+Device_Info.objects.filter(Q(ManageAddress__exact=None) | Q(ManageAddress__exact=''))
+```
+
+##### iexact
+
+不区分大小写的完全匹配，如果为比较提供的值是None，它将被解释为SQL NULL
+
+```python
+Device_Info.objects.filter(DeviceBrand__iexact='alibaba cloud')
+```
+
+##### contains
+
+区分大小写的包含查询
+
+```python
+Device_Info.objects.filter(DeviceName__contains='ALIBJ-PROD-')
+```
+
+##### icontains
+
+不区分大小写的包含查询
+
+```python
+Device_Info.objects.filter(DeviceName__icontains='alibj-PROD-')
+```
+
+##### in
+
+查询是否在给定的可迭代对象里。
+
+```python
+Device_Info.objects.filter(Id__in=[94,96])
+```
+
+##### gt
+
+大于
+
+##### gte
+
+大于等于
+
+##### lt
+
+小于
+
+##### lte
+
+小于等于
+
+##### startswith
+
+区分大小写开头匹配
+
+##### istartswith
+
+不区分大小写开头匹配
+
+##### endswith
+
+区分大小写末尾匹配
+
+##### iendswith
+
+不区分大小写末尾匹配
+
+##### range
+
+范围匹配包含
+
+```python
+import datetime
+start_date = datetime.date(2005, 1, 1)
+end_date = datetime.date(2005, 3, 31)
+Entry.objects.filter(pub_date__range=(start_date, end_date))
+```
+
+##### date
+
+对于日期时间字段，将值强制转换为日期。允许链接其他字段查
+
+```
+Entry.objects.filter(pub_date__date=datetime.date(2005, 1, 1))
+Entry.objects.filter(pub_date__date__gt=datetime.date(2005, 1, 1))
+```
+
+##### year
+
+对于日期和日期时间字段，精确匹配年份。
+
+##### iso_year
+
+对于日期和日期时间字段，精确匹配ISO 8601周编号年份。
+
+##### month
+
+对于日期和日期时间字段，精确匹配月份。
+
+##### day
+
+对于日期和日期时间字段，精确匹配日期。
+
+##### week
+
+对于日期和日期时间字段，根据ISO-8601返回星期数（1-52或53）。
+
+##### week_day
+
+对于日期和日期时间字段，星期几匹配，取一个整数值，表示从1（星期日）到7（星期六）星期几。
+
+##### quarter
+
+对于日期和日期时间字段，一年的四分之一匹配。取值介于1到4之间的整数值，代表一年的四分之一。
+
+##### time
+
+对于日期时间字段，将值强制转换为时间。
+
+```
+Entry.objects.filter(pub_date__time=datetime.time(14, 30))
+Entry.objects.filter(pub_date__time__range=(datetime.time(8), datetime.time(17))
+```
+
+##### hour
+
+对于日期时间和时间字段，精确匹配小时。
+
+##### minute
+
+对于日期时间和时间字段，精确匹配分钟。
+
+##### second
+
+对于日期时间和时间字段，精确匹配第二个。
+
+##### isnull
+
+判断是否为null
+
+##### regex
+
+区分大小写的正则表达式匹配。
+
+```python
+Entry.objects.get(title__regex=r'^(An?|The) +')
+```
+
+##### iregex
+
+不区分大小写的正则表达式匹配。
+
+```python
+Entry.objects.get(title__iregex=r'^(an?|the) +')
+```
+
+#### 聚合函数
+
+##### Avg
+
+返回给定表达式的平均值
+
+##### Count
+
+返回通过提供的表达式相关的对象数
+
+##### Max
+
+返回给定表达式的最大值
+
+##### Min
+
+返回给定表达式的最小值
+
+##### StdDev
+
+返回提供的表达式中数据的标准偏差
+
+##### Sum
+
+计算给定表达式的所有值的总和
+
+##### Variance
+
+返回提供的表达式中数据的方差
+
+#### 查询相关的工具
+
+##### Q
+
+可以用来组合复杂的查询，可以通过~Q()来做否操作。
+
+```python
+Poll.objects.get(
+    Q(question__startswith='Who'),
+    Q(pub_date=date(2005, 5, 2)) | Q(pub_date=date(2005, 5, 6))
+)
+```
+
+##### F
+
+一个F()对象表示一个模型字段或注释的列的值。这样就可以引用模型字段值并使用它们执行数据库操作，而无需实际将它们从数据库中拉出到Python内存中。
+
+相反，Django使用该F()对象生成一个SQL表达式，该表达式描述数据库级别所需的操作
+
+```
+from django.db.models import F
+
+reporter = Reporters.objects.get(name='Tintin')
+reporter.stories_filed = F('stories_filed') + 1
+reporter.save()
+```
+
+
+
+
 
 
 

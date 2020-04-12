@@ -1,0 +1,5 @@
+request.environ  获取所有的请求消息
+
+request.POST
+
+request.GET
